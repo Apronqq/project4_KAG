@@ -1,0 +1,255 @@
+{
+  "single": [
+    {
+      "id": "bp_sbp_stage2",
+      "indicator_code": "blood_pressure_systolic",
+      "operator": "gte",
+      "threshold": 160,
+      "state_code": "SBP_high_stage2",
+      "label": "收缩压显著升高",
+      "severity": "high"
+    },
+    {
+      "id": "bp_dbp_stage2",
+      "indicator_code": "blood_pressure_diastolic",
+      "operator": "gte",
+      "threshold": 100,
+      "state_code": "DBP_high_stage2",
+      "label": "舒张压显著升高",
+      "severity": "high"
+    },
+    {
+      "id": "fbg_diabetes",
+      "indicator_code": "fasting_blood_glucose",
+      "operator": "gte",
+      "threshold": 7.0,
+      "state_code": "FBG_diabetes",
+      "label": "空腹血糖达到糖尿病风险区间",
+      "severity": "high"
+    },
+    {
+      "id": "fbg_prediabetes",
+      "indicator_code": "fasting_blood_glucose",
+      "conditions": [
+        {"field": "value", "operator": "gte", "value": 5.6},
+        {"field": "value", "operator": "lt", "value": 7.0}
+      ],
+      "state_code": "FBG_prediabetes",
+      "label": "空腹血糖升高",
+      "severity": "medium"
+    },
+    {
+      "id": "hba1c_diabetes",
+      "indicator_code": "hba1c",
+      "operator": "gte",
+      "threshold": 6.5,
+      "state_code": "HbA1c_diabetes",
+      "label": "糖化血红蛋白达到糖尿病风险区间",
+      "severity": "high"
+    },
+    {
+      "id": "hba1c_prediabetes",
+      "indicator_code": "hba1c",
+      "conditions": [
+        {"field": "value", "operator": "gte", "value": 5.7},
+        {"field": "value", "operator": "lt", "value": 6.5}
+      ],
+      "state_code": "HbA1c_prediabetes",
+      "label": "糖化血红蛋白升高",
+      "severity": "medium"
+    },
+    {
+      "id": "ldl_high",
+      "indicator_code": "ldl_c",
+      "operator": "gte",
+      "threshold": 3.4,
+      "state_code": "LDL_high",
+      "label": "低密度脂蛋白升高",
+      "severity": "medium"
+    },
+    {
+      "id": "tg_high",
+      "indicator_code": "triglycerides",
+      "operator": "gte",
+      "threshold": 2.3,
+      "state_code": "TG_high",
+      "label": "甘油三酯升高",
+      "severity": "medium"
+    },
+    {
+      "id": "egfr_low",
+      "indicator_code": "egfr",
+      "operator": "lt",
+      "threshold": 60,
+      "state_code": "eGFR_moderately_low",
+      "label": "eGFR 中度下降",
+      "severity": "high"
+    },
+    {
+      "id": "alt_high",
+      "indicator_code": "alt",
+      "operator": "gt",
+      "threshold": 50,
+      "state_code": "ALT_high",
+      "label": "ALT 升高",
+      "severity": "medium"
+    },
+    {
+      "id": "creatinine_high",
+      "indicator_code": "creatinine",
+      "conditions": [
+        {
+          "logic": "OR",
+          "conditions": [
+            {
+              "logic": "AND",
+              "conditions": [
+                {"field": "patient_profile.sex", "operator": "eq", "value": "male"},
+                {"field": "value", "operator": "gte", "value": 110}
+              ]
+            },
+            {
+              "logic": "AND",
+              "conditions": [
+                {"field": "patient_profile.sex", "operator": "eq", "value": "female"},
+                {"field": "value", "operator": "gte", "value": 90}
+              ]
+            },
+            {
+              "logic": "AND",
+              "conditions": [
+                {"field": "patient_profile.sex", "operator": "not_in", "value": ["male", "female"]},
+                {"field": "value", "operator": "gte", "value": 100}
+              ]
+            }
+          ]
+        }
+      ],
+      "state_code": "CREATININE_high",
+      "label": "肌酐升高",
+      "severity": "high"
+    },
+    {
+      "id": "ast_high",
+      "indicator_code": "ast",
+      "operator": "gt",
+      "threshold": 40,
+      "state_code": "AST_high",
+      "label": "AST 升高",
+      "severity": "medium"
+    }
+  ],
+  "composite": [
+    {
+      "id": "bp_stage2_combined",
+      "indicator_code": "blood_pressure_combined",
+      "indicator_name": "血压组合",
+      "state_code": "BP_stage2_combined",
+      "label": "收缩压与舒张压同时显著升高",
+      "severity": "high",
+      "unit": "mmHg",
+      "value_indicator_codes": ["blood_pressure_systolic", "blood_pressure_diastolic"],
+      "conditions": [
+        {"indicator_code": "blood_pressure_systolic", "operator": "gte", "value": 160},
+        {"indicator_code": "blood_pressure_diastolic", "operator": "gte", "value": 100}
+      ]
+    },
+    {
+      "id": "diabetes_strong_combined",
+      "indicator_code": "glycemia_combined",
+      "indicator_name": "糖代谢组合",
+      "state_code": "DIABETES_strong_combined",
+      "label": "空腹血糖与糖化血红蛋白共同支持糖尿病高风险",
+      "severity": "high",
+      "unit": "mixed",
+      "value_indicator_codes": ["fasting_blood_glucose", "hba1c"],
+      "conditions": [
+        {"indicator_code": "fasting_blood_glucose", "operator": "gte", "value": 7.0},
+        {"indicator_code": "hba1c", "operator": "gte", "value": 6.5}
+      ]
+    },
+    {
+      "id": "prediabetes_combined",
+      "indicator_code": "glycemia_combined",
+      "indicator_name": "糖代谢组合",
+      "state_code": "PREDIABETES_combined",
+      "label": "空腹血糖与糖化血红蛋白共同提示糖前期风险",
+      "severity": "medium",
+      "unit": "mixed",
+      "value_indicator_codes": ["fasting_blood_glucose", "hba1c"],
+      "conditions": [
+        {"indicator_code": "fasting_blood_glucose", "operator": "gte", "value": 5.6},
+        {"indicator_code": "fasting_blood_glucose", "operator": "lt", "value": 7.0},
+        {"indicator_code": "hba1c", "operator": "gte", "value": 5.7},
+        {"indicator_code": "hba1c", "operator": "lt", "value": 6.5}
+      ]
+    },
+    {
+      "id": "ckd_strong_combined",
+      "indicator_code": "renal_combined",
+      "indicator_name": "肾功能组合",
+      "state_code": "CKD_strong_combined",
+      "label": "eGFR 下降且肌酐升高，强支持慢性肾病风险",
+      "severity": "high",
+      "unit": "mixed",
+      "value_indicator_codes": ["egfr"],
+      "conditions": [
+        {"indicator_code": "egfr", "operator": "lt", "value": 60},
+        {
+          "logic": "OR",
+          "conditions": [
+            {
+              "logic": "AND",
+              "conditions": [
+                {"field": "patient_profile.sex", "operator": "eq", "value": "male"},
+                {"indicator_code": "creatinine", "operator": "gte", "value": 110}
+              ]
+            },
+            {
+              "logic": "AND",
+              "conditions": [
+                {"field": "patient_profile.sex", "operator": "eq", "value": "female"},
+                {"indicator_code": "creatinine", "operator": "gte", "value": 90}
+              ]
+            },
+            {
+              "logic": "AND",
+              "conditions": [
+                {"field": "patient_profile.sex", "operator": "not_in", "value": ["male", "female"]},
+                {"indicator_code": "creatinine", "operator": "gte", "value": 100}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dyslipidemia_combined",
+      "indicator_code": "lipid_combined",
+      "indicator_name": "血脂组合",
+      "state_code": "DYSLIPIDEMIA_combined",
+      "label": "低密度脂蛋白与甘油三酯同时升高",
+      "severity": "medium",
+      "unit": "mixed",
+      "value_indicator_codes": ["ldl_c", "triglycerides"],
+      "conditions": [
+        {"indicator_code": "ldl_c", "operator": "gte", "value": 3.4},
+        {"indicator_code": "triglycerides", "operator": "gte", "value": 2.3}
+      ]
+    },
+    {
+      "id": "elderly_hypertension_combined",
+      "indicator_code": "age_bp_combined",
+      "indicator_name": "年龄与血压组合",
+      "state_code": "ELDERLY_HYPERTENSION_combined",
+      "label": "老年患者收缩压显著升高，需加强高血压风险管理",
+      "severity": "high",
+      "unit": "mmHg",
+      "value_indicator_codes": ["blood_pressure_systolic"],
+      "conditions": [
+        {"field": "patient_profile.age", "operator": "gte", "value": 60},
+        {"indicator_code": "blood_pressure_systolic", "operator": "gte", "value": 160}
+      ]
+    }
+  ]
+}

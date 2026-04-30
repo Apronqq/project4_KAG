@@ -1,0 +1,52 @@
+{
+  "jobs": [
+    {
+      "job_id": "job_fa9d64c4bc6e",
+      "filename": "脂肪肝诊疗指南.pdf",
+      "content_hash": "93329b2548dd11654aac2bbd35cb8decb28ba38f6eb557b1ad2c8310e43c15cf",
+      "status": "completed",
+      "message": "文档 脂肪肝诊疗指南.pdf 已完成入库，共 341 个 chunks。",
+      "document_id": "doc_93329b2548dd1165"
+    },
+    {
+      "job_id": "job_bf80747797c5",
+      "filename": "medlineplus_prediabetes.txt",
+      "content_hash": "f39b83fed61e58196008fca40734a1994216557f62b00934361753d6009dfef8",
+      "status": "completed",
+      "message": "文档 medlineplus_prediabetes.txt 已完成入库，共 20 个 chunks。",
+      "document_id": "doc_f39b83fed61e5819"
+    },
+    {
+      "job_id": "job_a5a11a7c921f",
+      "filename": "延缓慢性肾脏病进展临床管理指南.pdf",
+      "content_hash": "e06d0f0a5aba6a23ee4b46cc918d5f240ee1af2a3bcad2b63d7830fac4c5a0d3",
+      "status": "completed",
+      "message": "文档 延缓慢性肾脏病进展临床管理指南.pdf 已完成入库，共 391 个 chunks。",
+      "document_id": "doc_e06d0f0a5aba6a23"
+    },
+    {
+      "job_id": "job_917a50005dee",
+      "filename": "血脂管理指南.pdf",
+      "content_hash": "a2f5059ac2686b20edd51f14c5a91e861c3ba742072f36c3a6c2f8b31fa231c7",
+      "status": "completed",
+      "message": "文档 血脂管理指南.pdf 已完成入库，共 323 个 chunks。",
+      "document_id": "doc_a2f5059ac2686b20"
+    },
+    {
+      "job_id": "job_68a8f4683b09",
+      "filename": "高血压防治指南.pdf",
+      "content_hash": "32b2e11aec9b51bbfafbd43b4d0b60775fd845dac4c03499cb9e38821e83e0f9",
+      "status": "completed",
+      "message": "文档 高血压防治指南.pdf 已完成入库，共 721 个 chunks。",
+      "document_id": "doc_32b2e11aec9b51bb"
+    },
+    {
+      "job_id": "dup_e2b44292a27a",
+      "filename": "medlineplus_high_blood_pressure.txt",
+      "content_hash": "e2b44292a27a254a782817f032cadb1a8ebb2d503ad2079c2c91c22467730ff6",
+      "status": "duplicate",
+      "message": "检测到重复文件，已保留现有文档 medlineplus_high_blood_pressure.txt，跳过重复上传。",
+      "document_id": "doc_e2b44292a27a254a"
+    }
+  ]
+}
