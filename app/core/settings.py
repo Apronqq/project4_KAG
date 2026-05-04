@@ -59,7 +59,6 @@ class Settings:
     lexical_index_path: Path = Path(os.getenv("LEXICAL_INDEX_PATH", str(Path(__file__).resolve().parents[2] / "data" / "evidence_fts.sqlite3")))
     mmr_candidate_limit: int = int(os.getenv("MMR_CANDIDATE_LIMIT", "15"))
     rerank_candidate_limit: int = int(os.getenv("RERANK_CANDIDATE_LIMIT", "20"))
-    use_react_agent: bool = _as_bool(os.getenv("USE_REACT_AGENT"), True)
     summary_trigger_chars: int = int(os.getenv("SUMMARY_TRIGGER_CHARS", "2000"))
     bootstrap_kb_on_startup: bool = _as_bool(os.getenv("BOOTSTRAP_KB_ON_STARTUP"), False)
     drop_milvus_collection_on_rebuild: bool = _as_bool(os.getenv("DROP_MILVUS_COLLECTION_ON_REBUILD"), False)

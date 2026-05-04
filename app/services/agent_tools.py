@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from langchain_core.tools import StructuredTool
+
 from app.schemas.exam import RetrievalQuery
 
 
@@ -9,6 +11,19 @@ class MedicalKnowledgeRetrievalTool:
     def __init__(self, evidence_store, top_k: int = 5):
         self._evidence_store = evidence_store
         self._top_k = top_k
+        self.tool = StructuredTool.from_function(
+            func=self._run,
+            name="lookup_medical_knowledge",
+            description=(
+                "检索医学知识库中的指南、科普和证据片段。"
+                "当用户追问疾病风险、饮食、复查、指标范围或医学原因时使用。"
+            ),
+        )
+
+    def invoke(self, payload: dict | str) -> str:
+        if isinstance(payload, str):
+            payload = {"query": payload}
+        return str(self.tool.invoke(payload))
 
     def _run(self, query: str) -> str:
         chunks = self._evidence_store.search(

@@ -104,6 +104,7 @@ def get_runtime() -> AppRuntime:
         chat_model=model_runtime.assistant_chat_model,
         top_k_evidence=settings.top_k_evidence,
         workflow=medical_workflow,
+        memory_context_builder=chat_history_service.build_context,
     )
 
     _runtime = AppRuntime(

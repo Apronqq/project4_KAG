@@ -85,7 +85,7 @@ async def agent_chat(request: Request, session_id: str | None = Query(None)):
         }
 
     context = runtime.chat_history_service.build_context(session_id, payload)
-    answer = runtime.medical_agent.chat_assess(payload, context.history)
+    answer = runtime.medical_agent.chat_assess(payload, context.history, session_id=session_id)
     runtime.chat_history_service.record_user_message(session_id, payload)
     runtime.chat_history_service.record_assistant_message(session_id, answer)
     return {"session_id": session_id, "answer": answer, "timestamp": datetime.utcnow().isoformat()}
@@ -107,7 +107,7 @@ async def agent_chat_stream(request: Request, session_id: str | None = Query(Non
         normalized_exam_json = None
         done_event = None
         yield f"data: {json.dumps({'type': 'meta', 'session_id': session_id}, ensure_ascii=False)}\n\n"
-        async for event in runtime.medical_agent.stream_assess_async(payload, session_history=context.history):
+        async for event in runtime.medical_agent.stream_assess_async(payload, session_history=context.history, session_id=session_id):
             if event["type"] == "content":
                 assistant_content += event["content"]
             elif event["type"] == "result":

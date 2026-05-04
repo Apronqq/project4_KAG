@@ -6,13 +6,13 @@ import logging
 import re
 from typing import Generator
 
+from app.agents.medical_multi_agent import build_medical_multi_agent_supervisor, extract_memory_text_from_history
 from app.schemas.exam import (
     MedicalAssessmentResponse,
     PrimaryDiagnosis,
     SecondaryRecommendations,
 )
 from app.services.agent_tools import MedicalKnowledgeRetrievalTool
-from app.services.react_agent import MedicalReActAgent
 from app.workflows.medical_kag_pipeline import MedicalKAGWorkflow
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class MedicalAssessmentAgent:
         chat_model=None,
         top_k_evidence: int = 5,
         workflow: MedicalKAGWorkflow | None = None,
+        memory_context_builder=None,
     ):
         self._parser = parser
         self._normalizer = normalizer
@@ -58,85 +59,100 @@ class MedicalAssessmentAgent:
             evidence_store=self._evidence_store,
             top_k=self._top_k_evidence,
         )
-        self._react_agent = MedicalReActAgent(
-            chat_model=self._chat_model,
+        self._multi_agent_supervisor = build_medical_multi_agent_supervisor(
+            workflow=self._workflow,
             knowledge_tool=self._medical_knowledge_tool,
-            answer_builder=self._build_followup_fallback_answer,
+            chat_model=self._chat_model,
+            assessment_answer_builder=self._compose_answer,
+            followup_answer_builder=self._build_followup_fallback_answer,
+            initial_assessment_detector=self._looks_like_initial_assessment,
+            memory_context_builder=memory_context_builder,
         )
 
     def assess(self, raw_text: str) -> tuple[str, MedicalAssessmentResponse]:
+        result = self._multi_agent_supervisor.run(raw_text, [])
+        if result.structured_response is not None:
+            return result.answer, result.structured_response
         state = self._workflow.run_state(raw_text)
-        answer = self._compose_answer(state.response)
-        return answer, state.response
+        return self._compose_answer(state.response), state.response
 
     def looks_like_initial_assessment(self, user_input: str) -> bool:
         return self._looks_like_initial_assessment(user_input)
 
-    def chat_assess(self, user_input: str, session_history: list[dict]) -> str:
-        if not session_history or self._looks_like_initial_assessment(user_input):
-            return self.assess(user_input)[0]
-        result = self._react_agent.run(user_input, session_history)
+    def chat_assess(self, user_input: str, session_history: list[dict], session_id: str | None = None) -> str:
+        result = self._multi_agent_supervisor.run(user_input, session_history, session_id=session_id)
         return result.answer
 
-    def stream_assess(self, raw_text: str, session_history: list[dict] | None = None) -> Generator[dict, None, None]:
-        if session_history and not self._looks_like_initial_assessment(raw_text):
-            yield from self.stream_followup(raw_text, session_history)
-            return
+    def stream_assess(
+        self,
+        raw_text: str,
+        session_history: list[dict] | None = None,
+        session_id: str | None = None,
+    ) -> Generator[dict, None, None]:
+        yield from self._stream_multi_agent(raw_text, session_history or [], session_id=session_id)
 
-        state = None
-        event_iter = self._workflow.iter_events(raw_text)
-        while True:
-            try:
-                yield next(event_iter)
-            except StopIteration as stop:
-                state = stop.value
-                break
+    def stream_followup(
+        self,
+        user_input: str,
+        session_history: list[dict],
+        session_id: str | None = None,
+    ) -> Generator[dict, None, None]:
+        yield from self._stream_multi_agent(user_input, session_history, session_id=session_id)
 
-        yield {"type": "step", "label": "生成答复", "detail": "正在组织最终中文诊断与建议"}
-        # 中文注释：首次体检评估已经走完确定性流水线，这里直接根据结构化结果生成文本，避免 Agent 再次调用评估工具。
-        answer = self._compose_answer(state.response)
-        for chunk in self._chunk_text(answer, size=20):
-            yield {"type": "content", "content": chunk}
-
-        yield {
-            "type": "result",
-            "payload": state.response.model_dump(),
-        }
-        yield {"type": "done"}
-
-    def stream_followup(self, user_input: str, session_history: list[dict]) -> Generator[dict, None, None]:
+    def _stream_multi_agent(
+        self,
+        user_input: str,
+        session_history: list[dict],
+        session_id: str | None = None,
+    ) -> Generator[dict, None, None]:
         answer = ""
-        # 中文注释：追问不重复跑体检流水线，而是走显式 Agent 循环，逐步暴露决策与工具调用。
-        for event in self._react_agent.iter_events(user_input, session_history):
+        structured_response = None
+        # 中文注释：追问不重复跑体检流水线，而是走 LangGraph 多 Agent 编排，逐步暴露角色决策与工具调用。
+        for event in self._multi_agent_supervisor.iter_events(user_input, session_history, session_id=session_id):
+            if event.get("internal"):
+                if event["type"] == "assessment_result":
+                    structured_response = event["payload"]
+                continue
             if event["type"] == "final_answer":
                 answer = event["content"]
-                yield {"type": "agent_synthesizing", "detail": "正在整合上下文和检索结果生成最终回答"}
                 continue
             yield event
+        yield {"type": "step", "label": "生成答复", "detail": "正在组织最终中文诊断与建议"}
         for chunk in self._chunk_text(answer, size=20):
             yield {"type": "content", "content": chunk}
+        if structured_response is not None:
+            yield {"type": "result", "payload": structured_response.model_dump()}
         yield {"type": "done"}
 
-    async def stream_assess_async(self, raw_text: str, session_history: list[dict] | None = None):
-        if session_history and not self._looks_like_initial_assessment(raw_text):
-            for event in self.stream_followup(raw_text, session_history):
-                yield event
-                await asyncio.sleep(0)
-            return
-
-        state = None
-        async for event in self._workflow.iter_events_async(raw_text):
-            if event.get("type") == "workflow_state":
-                state = event["state"]
+    async def stream_assess_async(
+        self,
+        raw_text: str,
+        session_history: list[dict] | None = None,
+        session_id: str | None = None,
+    ):
+        answer = ""
+        structured_response = None
+        async for event in self._multi_agent_supervisor.aiter_events(
+            raw_text,
+            session_history or [],
+            session_id=session_id,
+        ):
+            if event.get("internal"):
+                if event["type"] == "assessment_result":
+                    structured_response = event["payload"]
+                continue
+            if event["type"] == "final_answer":
+                answer = event["content"]
                 continue
             yield event
-
+            await asyncio.sleep(0)
         yield {"type": "step", "label": "生成答复", "detail": "正在组织最终中文诊断与建议"}
-        answer = self._compose_answer(state.response)
+        await asyncio.sleep(0)
         for chunk in self._chunk_text(answer, size=20):
             yield {"type": "content", "content": chunk}
             await asyncio.sleep(0)
-        yield {"type": "result", "payload": state.response.model_dump()}
+        if structured_response is not None:
+            yield {"type": "result", "payload": structured_response.model_dump()}
         yield {"type": "done"}
 
     def _compose_answer(self, response: MedicalAssessmentResponse) -> str:
@@ -178,12 +194,7 @@ class MedicalAssessmentAgent:
 
     @staticmethod
     def _build_followup_fallback_answer(user_input: str, session_history: list[dict], evidence_text: str) -> str:
-        memory_parts = [
-            str(item.get("content", ""))
-            for item in session_history
-            if item.get("role") == "system" and ("诊断记忆" in str(item.get("content", "")) or "用户事实记忆" in str(item.get("content", "")))
-        ]
-        memory_text = "\n".join(memory_parts[-2:])
+        memory_text = extract_memory_text_from_history(session_history)
         lines = ["基于当前会话中已有的体检评估和知识库资料，我给出如下辅助说明："]
         if memory_text:
             lines.append(f"\n已参考的个人化上下文：\n{memory_text}")
